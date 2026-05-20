@@ -1,0 +1,76 @@
+@page "/"
+@page "/login"
+@rendermode RenderMode.InteractiveServer
+@inject ITouristService TouristService
+@inject NavigationManager Navigation
+
+<PageTitle>Куда я еду</PageTitle>
+
+<div class="bento-container">
+    <div class="bento-card">
+        <h1 class="gradient-text">Куда я еду</h1>
+        <p class="subtitle">Все данные о предстоящих поездках тут</p>
+
+        <EditForm Model="_model" OnValidSubmit="HandleLogin" FormName="tourist-login">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label for="phone">Введите номер телефона</label>
+                <InputText id="phone" @bind-Value="_model.Phone"
+                           class="premium-input"
+                           placeholder="+79001112233" />
+            </div>
+
+            <button type="submit" class="premium-button" disabled="@_busy">
+                @(_busy ? "..." : "Войти как турист")
+            </button>
+        </EditForm>
+
+        <a href="/agent/dashboard" class="premium-button secondary">
+            Я турагентство
+        </a>
+
+        @if (!string.IsNullOrEmpty(_error))
+        {
+            <p class="form-error">@_error</p>
+        }
+    </div>
+</div>
+
+@code {
+    private LoginModel _model = new();
+    private string _error = string.Empty;
+    private bool _busy;
+
+    private async Task HandleLogin()
+    {
+        _busy = true;
+        _error = string.Empty;
+
+        try
+        {
+            var tourist = await TouristService.LoginAsync(_model.Phone);
+            if (tourist is null)
+            {
+                _error = $"Турист с номером {_model.Phone} не найден. Попробуйте: +79001112233";
+            }
+            else
+            {
+                Navigation.NavigateTo($"/tourist/{tourist.Id}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Ошибка входа: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+
+    private sealed class LoginModel
+    {
+        public string Phone { get; set; } = string.Empty;
+    }
+}

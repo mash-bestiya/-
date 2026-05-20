@@ -1,0 +1,154 @@
+@page "/trip/{Id:int}"
+@rendermode RenderMode.InteractiveServer
+@inject ITripService TripService
+@inject IDocumentService DocumentService
+@inject NavigationManager Nav
+
+<PageTitle>@(_trip is null ? "Поездка" : $"{_trip.DepartureCity} → {_trip.ArrivalCity}")</PageTitle>
+
+@if (_trip is null)
+{
+    <p class="loader">Загрузка...</p>
+}
+else
+{
+    <div class="bento-container" style="display: block;">
+
+        <a href="javascript:history.back()" class="premium-button secondary inline back-link">← Назад</a>
+
+        <div class="bento-card">
+            <h2 class="gradient-text">@_trip.DepartureCity → @_trip.ArrivalCity</h2>
+            <p class="muted-line">
+                📅 @_trip.StartDate.ToString("dd.MM.yyyy") — @_trip.EndDate.ToString("dd.MM.yyyy")
+                (@((int)(_trip.EndDate - _trip.StartDate).TotalDays) дн.)
+            </p>
+            <p class="muted-line">🏨 <strong>@_trip.HotelName</strong></p>
+
+            <div class="payment-status @PaymentStatusCssClass(_trip.PaymentStatus)">
+                💳 @PaymentText(_trip.PaymentStatus)
+            </div>
+
+            <div class="payment-controls">
+                <label>Изменить статус оплаты:</label>
+                <InputSelect TValue="PaymentStatus"
+                             Value="_trip.PaymentStatus"
+                             ValueChanged="@((PaymentStatus s) => OnStatusChangedAsync(s))"
+                             ValueExpression="@(() => _trip.PaymentStatus)"
+                             class="premium-input compact">
+                    <option value="@PaymentStatus.Unpaid">Не оплачено</option>
+                    <option value="@PaymentStatus.Pending">В процессе</option>
+                    <option value="@PaymentStatus.Paid">Оплачено</option>
+                </InputSelect>
+            </div>
+        </div>
+
+        <h3 class="section-title">📄 Документы</h3>
+
+        <div class="docs-grid">
+            @foreach (var type in _allDocTypes)
+            {
+                var existing = _documents?.FirstOrDefault(d => d.Type == type);
+                <div class="bento-card doc-card">
+                    <div class="doc-icon">@DocIcon(type)</div>
+                    <h4>@DocumentService.GetTitle(type)</h4>
+
+                    @if (existing is null)
+                    {
+                        <p class="text-muted">Не привязан</p>
+                        <button type="button" class="premium-button inline"
+                                @onclick="() => CreateDocAsync(type)">
+                            Добавить
+                        </button>
+                    }
+                    else
+                    {
+                        <p class="text-muted">@existing.CreatedAt.ToString("dd.MM.yyyy HH:mm")</p>
+                        <a class="premium-button inline" target="_blank"
+                           href="/api/pdf/@DocumentService.GetTemplateFileName(type)">
+                            Скачать PDF
+                        </a>
+                        <button type="button" class="premium-button secondary inline"
+                                @onclick="() => DeleteDocAsync(existing.Id)">
+                            Удалить
+                        </button>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Trip? _trip;
+    private List<Document>? _documents;
+
+    private static readonly DocType[] _allDocTypes =
+    [
+        DocType.Contract, DocType.Voucher, DocType.Tickets,
+        DocType.Insurance, DocType.Memo, DocType.Visa,
+    ];
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _trip = await TripService.GetTripDetailsAsync(Id);
+        if (_trip is not null)
+        {
+            _documents = await DocumentService.GetForTripAsync(Id);
+        }
+    }
+
+    private async Task CreateDocAsync(DocType type)
+    {
+        await DocumentService.EnsureDocumentAsync(Id, type, DocumentService.GetTitle(type));
+        _documents = await DocumentService.GetForTripAsync(Id);
+    }
+
+    private async Task DeleteDocAsync(int docId)
+    {
+        await DocumentService.DeleteAsync(docId);
+        _documents = await DocumentService.GetForTripAsync(Id);
+    }
+
+    private async Task OnStatusChangedAsync(PaymentStatus status)
+    {
+        if (_trip is null) return;
+        _trip.PaymentStatus = status;
+        await TripService.UpdatePaymentStatusAsync(_trip.Id, status);
+    }
+
+    private static string DocIcon(DocType t) => t switch
+    {
+        DocType.Passport => "🛂",
+        DocType.IntPassport => "🌍",
+        DocType.Visa => "📘",
+        DocType.Contract => "📄",
+        DocType.Voucher => "🎫",
+        DocType.Insurance => "🏥",
+        DocType.Tickets => "✈️",
+        DocType.Memo => "📋",
+        _ => "📁",
+    };
+
+    private static string PaymentText(PaymentStatus s) => s switch
+    {
+        PaymentStatus.Unpaid => "Не оплачено",
+        PaymentStatus.Pending => "В процессе оплаты",
+        PaymentStatus.Paid => "Оплачено",
+        _ => "Неизвестно",
+    };
+
+    private static string PaymentStatusCssClass(PaymentStatus s) => s switch
+    {
+        PaymentStatus.Unpaid => "status-unpaid",
+        PaymentStatus.Pending => "status-pending",
+        PaymentStatus.Paid => "status-paid",
+        _ => string.Empty,
+    };
+}

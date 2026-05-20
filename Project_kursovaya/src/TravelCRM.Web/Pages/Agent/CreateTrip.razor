@@ -1,0 +1,110 @@
+@page "/agent/trip/new/{TouristId:int}"
+@rendermode RenderMode.InteractiveServer
+@inject ITripService TripService
+@inject ITouristService TouristService
+@inject NavigationManager Nav
+
+<PageTitle>Новая поездка</PageTitle>
+
+<div class="bento-container">
+    <div class="bento-card wide">
+        <a href="/agent/tourist/@TouristId" class="premium-button secondary inline back-link">← Назад</a>
+
+        <h2 class="gradient-text">Новая поездка</h2>
+        @if (_tourist is not null)
+        {
+            <p class="subtitle">Турист: @_tourist.LastName @_tourist.FirstName</p>
+        }
+
+        <EditForm Model="_dto" OnValidSubmit="SaveAsync" FormName="trip-create">
+            <FluentValidationValidator />
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Город отправления *</label>
+                    <InputText @bind-Value="_dto.DepartureCity" class="premium-input" placeholder="Москва" />
+                    <ValidationMessage For="@(() => _dto.DepartureCity)" class="field-error" />
+                </div>
+                <div class="form-group">
+                    <label>Город прибытия *</label>
+                    <InputText @bind-Value="_dto.ArrivalCity" class="premium-input" placeholder="Анталья" />
+                    <ValidationMessage For="@(() => _dto.ArrivalCity)" class="field-error" />
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Дата начала *</label>
+                    <InputDate @bind-Value="_dto.StartDate" class="premium-input" />
+                </div>
+                <div class="form-group">
+                    <label>Дата окончания *</label>
+                    <InputDate @bind-Value="_dto.EndDate" class="premium-input" />
+                    <ValidationMessage For="@(() => _dto.StartDate)" class="field-error" />
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Отель</label>
+                <InputText @bind-Value="_dto.HotelName" class="premium-input" placeholder="Rixos Premium 5*" />
+            </div>
+
+            <div class="form-group">
+                <label>Статус оплаты</label>
+                <InputSelect @bind-Value="_dto.PaymentStatus" class="premium-input">
+                    <option value="@PaymentStatus.Unpaid">Не оплачено</option>
+                    <option value="@PaymentStatus.Pending">В процессе</option>
+                    <option value="@PaymentStatus.Paid">Оплачено</option>
+                </InputSelect>
+            </div>
+
+            <button type="submit" class="premium-button" disabled="@_busy">
+                @(_busy ? "Сохранение..." : "Создать поездку")
+            </button>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(_message))
+        {
+            <p class="@(_isError ? "form-error" : "form-success")">@_message</p>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public int TouristId { get; set; }
+
+    private TripCreateDto _dto = new();
+    private Tourist? _tourist;
+    private string _message = string.Empty;
+    private bool _isError;
+    private bool _busy;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _dto.TouristId = TouristId;
+        _tourist = await TouristService.GetProfileAsync(TouristId);
+    }
+
+    private async Task SaveAsync()
+    {
+        _busy = true;
+        _message = string.Empty;
+        try
+        {
+            var trip = await TripService.CreateAsync(_dto);
+            _isError = false;
+            _message = "Поездка создана.";
+            await Task.Delay(500);
+            Nav.NavigateTo($"/trip/{trip.Id}");
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

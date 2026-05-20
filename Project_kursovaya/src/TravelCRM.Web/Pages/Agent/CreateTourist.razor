@@ -1,0 +1,102 @@
+@page "/agent/create"
+@rendermode RenderMode.InteractiveServer
+@inject IAgentService AgentService
+@inject NavigationManager Navigation
+
+<PageTitle>Новый турист</PageTitle>
+
+<div class="bento-container">
+    <div class="bento-card wide">
+        <h2 class="gradient-text">Новый турист</h2>
+        <p class="subtitle">Заполните данные клиента</p>
+
+        <EditForm Model="_dto" OnValidSubmit="SaveTouristAsync" FormName="tourist-create">
+            <FluentValidationValidator />
+
+            <div class="form-group">
+                <label>Фамилия *</label>
+                <InputText @bind-Value="_dto.LastName" class="premium-input" placeholder="Иванов" />
+                <ValidationMessage For="@(() => _dto.LastName)" class="field-error" />
+            </div>
+
+            <div class="form-group">
+                <label>Имя *</label>
+                <InputText @bind-Value="_dto.FirstName" class="premium-input" placeholder="Иван" />
+                <ValidationMessage For="@(() => _dto.FirstName)" class="field-error" />
+            </div>
+
+            <div class="form-group">
+                <label>Отчество</label>
+                <InputText @bind-Value="_dto.MiddleName" class="premium-input" placeholder="Иванович" />
+            </div>
+
+            <div class="form-group">
+                <label>Телефон *</label>
+                <InputText @bind-Value="_dto.Phone" class="premium-input" placeholder="+79991112233" />
+                <ValidationMessage For="@(() => _dto.Phone)" class="field-error" />
+            </div>
+
+            <div class="form-group">
+                <label>Паспорт РФ</label>
+                <InputText @bind-Value="_dto.PassportInfo" class="premium-input" placeholder="4500 123456" />
+            </div>
+
+            <div class="form-group">
+                <label>Загранпаспорт</label>
+                <InputText @bind-Value="_dto.IntPassportInfo" class="premium-input" placeholder="75 1234567" />
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Имя (EN)</label>
+                    <InputText @bind-Value="_dto.EngFirstName" class="premium-input" placeholder="Ivan" />
+                </div>
+                <div class="form-group">
+                    <label>Фамилия (EN)</label>
+                    <InputText @bind-Value="_dto.EngLastName" class="premium-input" placeholder="Ivanov" />
+                </div>
+            </div>
+
+            <button type="submit" class="premium-button" disabled="@_busy">
+                @(_busy ? "Сохранение..." : "Создать")
+            </button>
+            <a href="/agent/dashboard" class="premium-button secondary">Отмена</a>
+        </EditForm>
+
+        @if (!string.IsNullOrEmpty(_message))
+        {
+            <p class="@(_isError ? "form-error" : "form-success")">@_message</p>
+        }
+    </div>
+</div>
+
+@code {
+    private TouristCreateDto _dto = new();
+    private string _message = string.Empty;
+    private bool _isError;
+    private bool _busy;
+
+    private async Task SaveTouristAsync()
+    {
+        _busy = true;
+        _message = string.Empty;
+
+        try
+        {
+            var created = await AgentService.CreateTouristAsync(_dto);
+            _isError = false;
+            _message = "Турист создан, перенаправление...";
+            await Task.Delay(600);
+            Navigation.NavigateTo($"/agent/tourist/{created.Id}");
+        }
+        catch (Exception ex)
+        {
+            _isError = true;
+            _message = $"Ошибка: {ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+        }
+    }
+}

@@ -1,0 +1,62 @@
+@page "/agent/dashboard"
+@rendermode RenderMode.InteractiveServer
+@inject IAgentService AgentService
+@inject NavigationManager Nav
+
+<PageTitle>Кабинет агента</PageTitle>
+
+<div class="bento-container" style="display: block;">
+    <h2 class="gradient-text">Кабинет агента</h2>
+    <p class="subtitle">Управление туристами и поездками</p>
+
+    <div class="agent-toolbar">
+        <input type="search"
+               @bind="_query" @bind:event="oninput" @bind:after="OnSearch"
+               class="premium-input search-input"
+               placeholder="Поиск по фамилии, имени или телефону..." />
+
+        <a href="/agent/create" class="premium-button inline">
+            + Новый турист
+        </a>
+    </div>
+
+    @if (_tourists is null)
+    {
+        <p>Загрузка...</p>
+    }
+    else if (_tourists.Count == 0)
+    {
+        <p class="text-muted">Туристы не найдены.</p>
+    }
+    else
+    {
+        <p class="text-muted">Найдено туристов: @_tourists.Count</p>
+
+        <div class="tourist-grid">
+            @foreach (var tourist in _tourists)
+            {
+                <div class="bento-card clickable" @onclick="() => GoToTourist(tourist.Id)">
+                    <h3>@tourist.LastName @tourist.FirstName</h3>
+                    <p>📞 @tourist.Phone</p>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private List<Tourist>? _tourists;
+    private string _query = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tourists = await AgentService.GetAllTouristsAsync();
+    }
+
+    private async Task OnSearch()
+    {
+        _tourists = await AgentService.SearchAsync(_query);
+    }
+
+    private void GoToTourist(int id) => Nav.NavigateTo($"/agent/tourist/{id}");
+}

@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dotnet --list-sdks)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet new *)",
+      "Bash(dotnet tool *)",
+      "Bash(dotnet restore *)",
+      "Bash(dotnet build *)",
+      "Bash(dotnet ef *)",
+      "Bash(dotnet test *)",
+      "Bash(dotnet publish *)",
+      "PowerShell(Stop-Process -Id 14912 -Force -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process -Id 14912 -ErrorAction SilentlyContinue)",
+      "PowerShell($proc = Get-NetTCPConnection -LocalPort 5000 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if \\($proc\\) { Stop-Process -Id $proc.OwningProcess -Force; Write-Output \"killed $\\($proc.OwningProcess\\)\" } else { Write-Output \"no listener\" })"
+    ]
+  }
+}

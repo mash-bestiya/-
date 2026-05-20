@@ -1,0 +1,104 @@
+@page "/tourist/{Id:int}"
+@rendermode RenderMode.InteractiveServer
+@inject ITouristService TouristService
+
+<PageTitle>@(_tourist is null ? "Профиль" : $"{_tourist.LastName} {_tourist.FirstName}")</PageTitle>
+
+@if (_tourist is null)
+{
+    <p class="loader">Загрузка...</p>
+}
+else
+{
+    <div class="bento-container" style="display: block;">
+        <div class="bento-card">
+            <div class="row-between">
+                <div>
+                    <h2>@_tourist.LastName @_tourist.FirstName @_tourist.MiddleName</h2>
+                    <p class="text-muted">📞 @_tourist.Phone</p>
+                </div>
+                <div>
+                    <small>Eng Name:</small><br />
+                    <strong>@_tourist.EngFirstName @_tourist.EngLastName</strong>
+                </div>
+            </div>
+        </div>
+
+        <div class="docs-grid">
+            <div class="bento-card">
+                <h4>🛂 Паспорт РФ</h4>
+                <small>@(string.IsNullOrEmpty(_tourist.PassportInfo) ? "Не заполнен" : _tourist.PassportInfo)</small>
+            </div>
+            <div class="bento-card">
+                <h4>🌍 Загранпаспорт</h4>
+                <small>@(string.IsNullOrEmpty(_tourist.IntPassportInfo) ? "Не заполнен" : _tourist.IntPassportInfo)</small>
+            </div>
+            <div class="bento-card">
+                <h4>🛂 Визы</h4>
+                <small>@(string.IsNullOrEmpty(_tourist.VisaInfo) ? "Нет виз" : _tourist.VisaInfo)</small>
+            </div>
+            <div class="bento-card">
+                <h4>👥 Компания</h4>
+                <small>@_tourist.LinkedAsMain.Count чел.</small>
+            </div>
+        </div>
+
+        <div class="bento-card wide">
+            <h3>📅 Ближайшие поездки</h3>
+
+            @{
+                var upcoming = _tourist.Trips
+                    .Where(t => t.EndDate >= DateTime.Today)
+                    .OrderBy(t => t.StartDate)
+                    .ToList();
+                var past = _tourist.Trips
+                    .Where(t => t.EndDate < DateTime.Today)
+                    .OrderByDescending(t => t.StartDate)
+                    .ToList();
+            }
+
+            @if (upcoming.Count == 0)
+            {
+                <p class="text-muted">Пока нет запланированных поездок.</p>
+            }
+            else
+            {
+                <div class="trip-grid">
+                    @foreach (var trip in upcoming)
+                    {
+                        <a href="/trip/@trip.Id" class="bento-card trip-card">
+                            <h4 class="trip-route">@trip.DepartureCity → @trip.ArrivalCity</h4>
+                            <p>📅 @trip.StartDate.ToString("dd.MM.yyyy")</p>
+                            <p>🏨 @trip.HotelName</p>
+                        </a>
+                    }
+                </div>
+            }
+
+            @if (past.Count > 0)
+            {
+                <h3 style="margin-top: 32px;">🕓 Прошедшие поездки</h3>
+                <div class="trip-grid">
+                    @foreach (var trip in past)
+                    {
+                        <a href="/trip/@trip.Id" class="bento-card trip-card past">
+                            <h4 class="trip-route">@trip.DepartureCity → @trip.ArrivalCity</h4>
+                            <p>📅 @trip.StartDate.ToString("dd.MM.yyyy")</p>
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    private Tourist? _tourist;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tourist = await TouristService.GetProfileAsync(Id);
+    }
+}

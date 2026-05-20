@@ -1,0 +1,17 @@
+@page "/agent-login"
+@rendermode RenderMode.InteractiveServer
+@inject NavigationManager Nav
+
+<PageTitle>Перенаправление...</PageTitle>
+
+<p>Перенаправляем в кабинет агента...</p>
+
+@code {
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Nav.NavigateTo("/agent/dashboard");
+        }
+    }
+}

@@ -1,0 +1,49 @@
+@*
+    Простое модальное окно подтверждения.
+    Использование:
+        <ConfirmDialog @ref="dialog" Title="..." OnConfirm="OnConfirmHandler" />
+        ...
+        await dialog.ShowAsync("Вы уверены?");
+*@
+
+@if (_visible)
+{
+    <div class="modal-backdrop" @onclick="OnCancel"></div>
+    <div class="modal-dialog" role="dialog" aria-modal="true">
+        <h3>@Title</h3>
+        <p>@_message</p>
+        <div class="modal-actions">
+            <button type="button" class="premium-button" @onclick="OnConfirmClicked">Да</button>
+            <button type="button" class="premium-button secondary" @onclick="OnCancel">Отмена</button>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Title { get; set; } = "Подтверждение";
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    private bool _visible;
+    private string _message = string.Empty;
+
+    public Task ShowAsync(string message)
+    {
+        _message = message;
+        _visible = true;
+        return InvokeAsync(StateHasChanged);
+    }
+
+    private async Task OnConfirmClicked()
+    {
+        _visible = false;
+        if (OnConfirm.HasDelegate)
+        {
+            await OnConfirm.InvokeAsync();
+        }
+    }
+
+    private void OnCancel()
+    {
+        _visible = false;
+    }
+}
